@@ -1,4 +1,4 @@
-from parts import Board
+from gameparts import Board
 
 
 # Создать игровое поле - объект класса Board.
