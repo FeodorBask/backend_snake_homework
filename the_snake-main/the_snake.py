@@ -1,4 +1,4 @@
-from random import randint
+from random import choice, randint
 import pygame
 
 # Константы для размеров поля и сетки:
@@ -84,20 +84,15 @@ class Snake(GameObject):
     """Класс для змейки - главного игрового объекта"""
     def __init__(self):
         super().__init__()
-        # ИНИЦИАЛИЗИРУЕМ ВСЕ АТРИБУТЫ НЕПОСРЕДСТВЕННО В init
-        self.length = 1
-        self.positions = [((SCREEN_WIDTH // 2), (SCREEN_HEIGHT // 2))]
-        self.direction = RIGHT
-        self.next_direction = None
-        self.body_color = SNAKE_COLOR
-        self.last = None
+        self.reset()
     
     def reset(self):
-        """Сбрасывает змейку в начальное состояние"""
+        """Сбрасывает змейку в начальное состояние после столкновения с собой"""
         self.length = 1
         self.positions = [((SCREEN_WIDTH // 2), (SCREEN_HEIGHT // 2))]
-        self.direction = RIGHT
+        self.direction = choice([UP, DOWN, LEFT, RIGHT])
         self.next_direction = None
+        self.body_color = SNAKE_COLOR
         self.last = None
     
     def update_direction(self):
@@ -107,23 +102,27 @@ class Snake(GameObject):
             self.next_direction = None
     
     def move(self):
-        """Обновляет позицию змейки - двигает её вперед"""
+        """Обновляет позицию змейки, добавляя новую голову и удаляя хвост"""
         # Сохраняем последнюю позицию для затирания
         self.last = self.positions[-1] if len(self.positions) > 1 else None
         
         # Получаем текущую позицию головы
-        head_x, head_y = self.positions[0]
+        head = self.get_head_position()
         
-        # Вычисляем новую позицию головы
-        dir_x, dir_y = self.direction
-        new_x = (head_x + dir_x * GRID_SIZE) % SCREEN_WIDTH
-        new_y = (head_y + dir_y * GRID_SIZE) % SCREEN_HEIGHT
+        # Вычисляем новую позицию головы с телепортацией через границы
+        new_x = (head[0] + self.direction[0] * GRID_SIZE) % SCREEN_WIDTH
+        new_y = (head[1] + self.direction[1] * GRID_SIZE) % SCREEN_HEIGHT
         new_head = (new_x, new_y)
+        
+        # ✅ Проверка столкновения с собой
+        if new_head in self.positions:
+            self.reset()
+            return
         
         # Добавляем новую голову в начало списка
         self.positions.insert(0, new_head)
         
-        # Если длина не увеличилась, удаляем хвост
+        # Удаляем последний элемент, если длина не увеличилась
         if len(self.positions) > self.length:
             self.positions.pop()
     
@@ -132,44 +131,17 @@ class Snake(GameObject):
         return self.positions[0]
     
     def draw(self):
-        """Отрисовывает змейку на экране"""
-        # Отрисовываем все сегменты тела, кроме головы
-        for position in self.positions[1:]:
-            if (isinstance(position, (tuple, list)) and 
-                len(position) == 2 and 
-                all(isinstance(coord, (int, float)) for coord in position)):
-                
-                rect = pygame.Rect(
-                    (int(position[0]), int(position[1])), 
-                    (GRID_SIZE, GRID_SIZE)
-                )
-                pygame.draw.rect(screen, self.body_color, rect)
-                pygame.draw.rect(screen, BORDER_COLOR, rect, 1)
+        """Отрисовывает змейку на экране, затирая след"""
+        # Отрисовываем все сегменты тела
+        for position in self.positions:
+            rect = pygame.Rect(position, (GRID_SIZE, GRID_SIZE))
+            pygame.draw.rect(screen, self.body_color, rect)
+            pygame.draw.rect(screen, BORDER_COLOR, rect, 1)
         
-        # Отрисовываем голову змейки
-        head_position = self.positions[0]
-        if (isinstance(head_position, (tuple, list)) and 
-            len(head_position) == 2 and 
-            all(isinstance(coord, (int, float)) for coord in head_position)):
-            
-            head_rect = pygame.Rect(
-                (int(head_position[0]), int(head_position[1])), 
-                (GRID_SIZE, GRID_SIZE)
-            )
-            pygame.draw.rect(screen, self.body_color, head_rect)
-            pygame.draw.rect(screen, BORDER_COLOR, head_rect, 1)
-        
-        # Затираем последний сегмент (если он есть)
+        # Затираем последний сегмент
         if self.last:
-            if (isinstance(self.last, (tuple, list)) and 
-                len(self.last) == 2 and 
-                all(isinstance(coord, (int, float)) for coord in self.last)):
-                
-                last_rect = pygame.Rect(
-                    (int(self.last[0]), int(self.last[1])), 
-                    (GRID_SIZE, GRID_SIZE)
-                )
-                pygame.draw.rect(screen, BOARD_BACKGROUND_COLOR, last_rect)
+            last_rect = pygame.Rect(self.last, (GRID_SIZE, GRID_SIZE))
+            pygame.draw.rect(screen, BOARD_BACKGROUND_COLOR, last_rect)
 
 
 def handle_keys(snake):
