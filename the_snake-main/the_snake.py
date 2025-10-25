@@ -1,5 +1,3 @@
-"""Snake game implementation using Pygame."""
-
 from random import randint
 import pygame
 
